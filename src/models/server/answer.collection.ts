@@ -16,8 +16,8 @@ export default async function createAnswerCollection(){
     //creating attributes
     await Promise.all([
         databases.createStringAttribute(db,answerCollection,"content",1000,true),
-        databases.createStringAttribute(db,answerCollection,"questionId",50,true),
-        databases.createStringAttribute(db,answerCollection,"authorId",50,true),
+        databases.createStringAttribute(db,answerCollection,"questionId",50,true),// for which ques the answer is given
+        databases.createStringAttribute(db,answerCollection,"authorId",50,true), // who is giving the answer
     ])
     console.log("attributes created")
 

@@ -4,6 +4,8 @@ import { storage } from "./config"
 
 export default async function getOrCreateStorage(){
     try {
+        // if the bucket is already collected then no need to create another bucket just connect with that 
+        // bucket is used here to store the images that the user will post with the question like screeshot or any other image
         await storage.getBucket(questionAttachmentBucket);
         console.log("Storage Connected")
     } catch (error) {

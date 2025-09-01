@@ -14,7 +14,7 @@ export default async function createQuestionCollection(){
 
     //create attributes 
     await Promise.all([
-        databases.createStringAttribute(db,questionCollection,"Title",100,true),
+        databases.createStringAttribute(db,questionCollection,"title",100,true),
         databases.createStringAttribute(db,questionCollection,"content",1000,true),
         databases.createStringAttribute(db,questionCollection,"authorId",50,true),
         databases.createStringAttribute(db,questionCollection,"tags",50,true,undefined,true),
@@ -23,10 +23,12 @@ export default async function createQuestionCollection(){
 
     console.log("questions attributes created")
 
-    // create indexes
+    await new Promise(resolve => setTimeout(resolve, 5000));//created this promise as a timer to wait for 5 sec beacuse the attributes are not instantly reflecting after creation beacause of which we aren't able to create indexes for the attribute we want to
 
+    // create indexes
+    // databases.createIndex(databaseId,collectionId,"key==indexname(must be unique)",IndexType,"array of attribute name on which you want to create index")
     await Promise.all([
-        databases.createIndex(db,questionCollection,"title",IndexType.Fulltext,["title"],['asc']),
-        databases.createIndex(db,questionCollection,"content",IndexType.Fulltext,["content"],['asc'])
+        databases.createIndex(db,questionCollection,"title_index",IndexType.Fulltext,["title"]),
+        databases.createIndex(db,questionCollection,"content_index",IndexType.Fulltext,["content"])
     ])
 }

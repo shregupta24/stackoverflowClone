@@ -5,99 +5,100 @@ import { Query } from "appwrite";
 import { NextRequest, NextResponse } from "next/server";
 import { ID } from "node-appwrite";
 
-export async function POST(request : NextRequest){
-    try {
-        //grab the data
-        const {type,typeId,voteStatus,votedById} = await request.json();
-        const response = await databases.listDocuments(db,voteCollection,[
-            Query.equal("type",type),
-            Query.equal("typeId" , typeId),
-            Query.equal("votedById" , votedById)
-        ])
-        //means now user has clicked the upvoted or downvoted button means 
-        // if user has clicked let suppose upvote button for the first time that we have to increase the upvote 
-        // of that ans/ques but if user has again clicked that it means now he wants to take his vote back 
-        // so we have to decrease the upvote by one so the second time clicking we are handling it 
-        // document already exist means someone has already upvoted or downvoted it
-        if(response.documents.length > 0){
-            //document exist
+export async function POST(request: NextRequest) {
+  try {
+    //  Grab request data
+    const { type, typeId, voteStatus, votedById } = await request.json();
 
-            await databases.deleteDocument(db,voteCollection,response.documents[0]?.$id)
-            //decrease the reputation of the ans/ques of the author
+    // Check if this user has already voted on this doc
+    const prevVotes = await databases.listDocuments(db, voteCollection, [
+      Query.equal("type", type),
+      Query.equal("typeId", typeId),
+      Query.equal("votedById", votedById),
+    ]);
 
-            const QuestionOrAnswer = await databases.getDocument(db,type === "question" ? questionCollection : answerCollection,typeId)
+    const prevVote = prevVotes.documents[0]; // might be undefined
 
-            const authorPrefernce = await users.getPrefs<UserPrefs>(QuestionOrAnswer.authorId)
+    // Get the question/answer doc + author info
+    const QuestionOrAnswer = await databases.getDocument(
+      db,
+      type === "question" ? questionCollection : answerCollection,
+      typeId
+    );
+    const authorPrefs = await users.getPrefs<UserPrefs>(QuestionOrAnswer.authorId);
 
-            await users.updatePrefs(QuestionOrAnswer.authorId,{
-                reputation : response.documents[0]?.voteStatus === "upvoted" ? Number(authorPrefernce.reputation) - 1 : Number(authorPrefernce.reputation) + 1
-            })
+    // If user clicked same vote again → remove vote
+    if (prevVote && prevVote.voteStatus === voteStatus) {
+      await databases.deleteDocument(db, voteCollection, prevVote.$id);
 
+      await users.updatePrefs<UserPrefs>(QuestionOrAnswer.authorId, {
+        reputation:
+          voteStatus === "upvoted"
+            ? Number(authorPrefs.reputation) - 1 //if someone has upvoted the question 
+            // and now he has again clicked that it means we are removing the upvote so the prefernce of 
+            // user will get decrease by one or we can say it will return to it previous state
+            : Number(authorPrefs.reputation) + 1,
+            // and if it is downvote then we are increasing the prefernce / reputation of user
+      });
+    } else {
+      // Otherwise, create/update vote
+      if (prevVote) {
+        // delete old vote first (switching upvote ↔ downvote)
+        await databases.deleteDocument(db, voteCollection, prevVote.$id);
+        // taking the reputation back to its original state
+        await users.updatePrefs<UserPrefs>(QuestionOrAnswer.authorId, {
+          reputation:
+            prevVote.voteStatus === "upvoted"
+              ? Number(authorPrefs.reputation) - 1 // remove old upvote
+              : Number(authorPrefs.reputation) + 1, // remove old downvote
+        });
+      }
 
-        }
-        //means the prev vote doesn't exist or vote status change means user has done upvote but now he wants to do 
-        // downvote so this condition will match
-        if(response.documents[0]?.voteStatus !== voteStatus){
-            const response = await databases.createDocument(db,voteCollection,ID.unique(),{
-                type,
-                typeId,
-                voteStatus,
-                votedById
-            })
-            //increase or decrease the reputation
+      // add new vote
+      await databases.createDocument(db, voteCollection, ID.unique(), {
+        type,
+        typeId,
+        voteStatus,
+        votedById,
+      });
 
-            const QuestionOrAnswer = await databases.getDocument(db,type === "question" ? questionCollection: answerCollection,typeId)
-            const authorPrefs = await users.getPrefs<UserPrefs>(QuestionOrAnswer.authorId);
-
-            //as this is a fresh document we can't directly update user prefernce
-
-            //if vote was present
-            if(response.documents[0]){
-                //these means previous vote was upvoted and now its downvoted so we have to decrease the reputation
-                await users.updatePrefs <UserPrefs>(QuestionOrAnswer.authorId , {
-                    reputation : response.documents[0].voteStatus === "upvoted" 
-                    ? Number(authorPrefs.reputation) - 1 
-                    : Number(authorPrefs.reputation) + 1
-                }) 
-            }else{
-                await users.updatePrefs(QuestionOrAnswer.authorId , {
-                    reputation : response.documents[0] .voteStatus === "upvoted" 
-                    ? Number(authorPrefs.reputation) + 1
-                    : Number(authorPrefs.reputation) - 1
-                })
-            }
-        }
-        //now we have to grab total number of upvotes and downvotes that 
-        // particular document has so that we can send it to the frontend to reflect it in UI
-        const[upvotes,downvotes] = await Promise.all(
-           [
-                databases.listDocuments(db,voteCollection,[
-                Query.equal("type",type),
-                Query.equal("typeId" , typeId),
-                Query.equal("voteStatus" , "upvoted"),
-                Query.equal("votedById",votedById),
-                Query.limit(1)
-            ]),
-                databases.listDocuments(db,voteCollection,[
-                Query.equal("type",type),
-                Query.equal("typeId" , typeId),
-                Query.equal("voteStatus" , "downvoted"),
-                Query.equal("votedById",votedById),
-                Query.limit(1)
-            ]),
-           ]
-        )
-
-        return NextResponse.json({
-            data:{
-                document : null,
-                voteResult : upvotes.total = downvotes.total
-            },
-            message:"votes calculated"
-        },{
-            status:200
-        })
-    } catch (error : any) {
-       return NextResponse.json( {message : error?.message || "error in deleting vote"} , {status : 500}) 
+      await users.updatePrefs<UserPrefs>(QuestionOrAnswer.authorId, {
+        reputation:
+          voteStatus === "upvoted"
+            ? Number(authorPrefs.reputation) + 1
+            : Number(authorPrefs.reputation) - 1,
+      });
     }
+
+    // Get total votes (for all users, not just one)
+    const [upvotes, downvotes] = await Promise.all([
+      databases.listDocuments(db, voteCollection, [ //it will return a object with { "total" : no. of documents that matched the query , "documents" : first page of documents }
+        Query.equal("type", type),
+        Query.equal("typeId", typeId),
+        Query.equal("voteStatus", "upvoted"),
+      ]),
+      databases.listDocuments(db, voteCollection, [
+        Query.equal("type", type),
+        Query.equal("typeId", typeId),
+        Query.equal("voteStatus", "downvoted"),
+      ]),
+    ]);
+
+    // Send result
+    return NextResponse.json(
+      {
+        data: {
+          upvotes: upvotes.total,
+          downvotes: downvotes.total,
+        },
+        message: "votes calculated",
+      },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    return NextResponse.json(
+      { message: error?.message || "error in processing vote" },
+      { status: 500 }
+    );
+  }
 }

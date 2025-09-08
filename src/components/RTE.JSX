@@ -10,3 +10,5 @@ const RTE = dynamic(
         }),
         {ssr : false}
 );
+
+export default RTE

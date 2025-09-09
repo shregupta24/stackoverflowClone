@@ -16,7 +16,8 @@ import { db, questionAttachmentBucket, questionCollection } from "@/models/name"
 import { Confetti } from "@/components/magicui/confetti";
 import confetti from "canvas-confetti";
 
-//this compenent is basically a sytled container renders a meteors animation amd wraps around whatever children passes.
+//this compenent is basically a sytled reusable wrapper container renders a meteors animation and 
+// wraps around whatever children passes.
 const LabelInputContainer = ({
     children,
     className,
@@ -123,9 +124,11 @@ const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
     const update = async () => {
         if (!question) throw new Error("Please provide a question");
 
+//this function is used to check whether attachment is passed if yes then delete the previous attachment 
+// and create a new attachment file and return the new attachmant id or if no attachment is passed then 
+// pass the previous attachment id
         const attachmentId = await (async () => {
             if (!formData.attachment) return question?.attachmentId as string;
-            
             if(question.attachmentId)
                 await storage.deleteFile(questionAttachmentBucket, question.attachmentId);
 
@@ -268,17 +271,19 @@ const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
                             if (tag.length === 0) return;
                             setFormData(prev => ({
                                 ...prev,
-                                tags: new Set([...Array.from(prev.tags), tag]),
+                                tags: new Set([...Array.from(prev.tags), tag]),//as prev.tags is a set so 
+                                // first we are converting it into array then taking all the prev values and then 
+                                // adding the new one and then again converting it into set
                             }));
-                            setTag(() => "");
+                            setTag(() => ""); //resets the input field for new tag back to empty
                         }}
                     >
                         <div className="absolute inset-x-0 -top-px mx-auto h-px w-1/2 bg-gradient-to-r from-transparent via-teal-500 to-transparent shadow-2xl" />
                         <span className="relative z-20">Add</span>
                     </button>
                 </div>
+                {/* this div is used to display tags with a pill shape button having cross as sign to delete the tag*/}
                 <div className="flex flex-wrap gap-2"> 
-                    //display added Tags
                     {Array.from(formData.tags).map((tag, index) => (
                         <div key={index} className="flex items-center gap-2">
                             <div className="group relative inline-block rounded-full bg-slate-800 p-px text-xs font-semibold leading-6 text-white no-underline shadow-2xl shadow-zinc-900">

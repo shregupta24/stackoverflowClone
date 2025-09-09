@@ -8,23 +8,25 @@ import { useAuthStore } from "@/Store/Auth";
 import { cn } from "@/lib/utils";
 import slugify from "slugify";
 import { IconX } from "@tabler/icons-react";
-import { Models, ID } from "appwrite";
+import { Models,ID } from "node-appwrite";
 import { useRouter } from "next/navigation";
 import React from "react";
 import { databases, storage } from "@/models/client/config";
 import { db, questionAttachmentBucket, questionCollection } from "@/models/name";
 import { Confetti } from "@/components/magicui/confetti";
+import confetti from "canvas-confetti";
 
+//this compenent is basically a sytled container renders a meteors animation amd wraps around whatever children passes.
 const LabelInputContainer = ({
     children,
     className,
 }: {
-    children: React.ReactNode;
-    className?: string;
+    children: React.ReactNode; //can be anything react can render
+    className?: string; //optional for additional css classes
 }) => {
     return (
         <div
-            className={cn(
+            className={cn( //utility function classNames helper to merge multiple css classes safely
                 "relative flex w-full flex-col space-y-2 overflow-hidden rounded-xl border border-white/20 bg-slate-950 p-4",
                 className
             )}
@@ -35,34 +37,45 @@ const LabelInputContainer = ({
     );
 };
 
-const QuestionForm = ({ question }: { question?: Models.Document }) => {
+interface QuestionDocument {
+    $id: string;
+    title: string;
+    content: string;
+    authorId: string;
+    tags: string[];
+    attachmentId?: string;
+}
+ 
+//if question as prop is passes it means it will work in update mode and if ques is not passed it means it will work as create mode
+const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
     const { user } = useAuthStore();
-    const [tag, setTag] = React.useState("");
+    const [tag, setTag] = React.useState(""); //holds text of the tag input
     const router = useRouter();
 
     const [formData, setFormData] = React.useState({
         title: String(question?.title || ""),
         content: String(question?.content || ""),
-        authorId: user?.$id,
+        authorId: user?.$id, 
         tags: new Set((question?.tags || []) as string[]), //using new set() ensure uniqueness
-        attachment: null as File | null,
+        attachment: null as File | null, //uploaded image file or null
     });
 
     React.useEffect(() => {
         setFormData(prev => ({ ...prev, authorId: user?.$id ?? prev.authorId }));
-    }, [user]);
+    }, [user]); //whenever used id change update it to form data also
 
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState("");
 
+    //Fires a confetti animation for 3 seconds after successful creation of a question
     const loadConfetti = (timeInMS = 3000) => {
         const end = Date.now() + timeInMS; // 3 seconds
         const colors = ["#a786ff", "#fd8bbc", "#eca184", "#f8deb1"];
 
         const frame = () => {
             if (Date.now() > end) return;
-
-            Confetti({
+    //its written twice because we want to show the confetti from both sides of the screen
+            confetti({
                 particleCount: 2,
                 angle: 60,
                 spread: 55,
@@ -70,7 +83,7 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                 origin: { x: 0, y: 0.5 },
                 colors: colors,
             });
-            Confetti({
+            confetti({
                 particleCount: 2,
                 angle: 120,
                 spread: 55,
@@ -112,8 +125,9 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
 
         const attachmentId = await (async () => {
             if (!formData.attachment) return question?.attachmentId as string;
-
-            await storage.deleteFile(questionAttachmentBucket, question.attachmentId);
+            
+            if(question.attachmentId)
+                await storage.deleteFile(questionAttachmentBucket, question.attachmentId);
 
             const file = await storage.createFile(
                 questionAttachmentBucket,
@@ -149,7 +163,7 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
 
         try {
             const response = question ? await update() : await create();
-
+            //redirects to the newly created/updated question 
             router.push(`/questions/${response.$id}/${slugify(formData.title)}`);
         } catch (error: any) {
             setError(() => error.message);
@@ -167,6 +181,8 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                     </div>
                 </LabelInputContainer>
             )}
+
+            
             <LabelInputContainer>
                 <Label htmlFor="title">
                     Title Address
@@ -209,7 +225,7 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                 <Input
                     id="image"
                     name="image"
-                    accept="image/*"
+                    accept="image/*" //only upload image for inputs
                     placeholder="e.g. Is there an R function for finding the index of an element in a vector?"
                     type="file"
                     onChange={e => {
@@ -231,8 +247,11 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                         suggestions.
                     </small>
                 </Label>
-                <div className="flex w-full gap-4">
-                    <div className="w-full">
+                <div className="flex w-full gap-4" 
+                //w-full means width full
+                //gap-4 means 1 rem space between children
+                >
+                    <div className="w-full"> 
                         <Input
                             id="tag"
                             name="tag"
@@ -258,7 +277,8 @@ const QuestionForm = ({ question }: { question?: Models.Document }) => {
                         <span className="relative z-20">Add</span>
                     </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2"> 
+                    //display added Tags
                     {Array.from(formData.tags).map((tag, index) => (
                         <div key={index} className="flex items-center gap-2">
                             <div className="group relative inline-block rounded-full bg-slate-800 p-px text-xs font-semibold leading-6 text-white no-underline shadow-2xl shadow-zinc-900">

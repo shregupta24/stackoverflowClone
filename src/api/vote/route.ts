@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
         data: {
           upvotes: upvotes.total,
           downvotes: downvotes.total,
+          total : upvotes.total + downvotes.total
         },
         message: "votes calculated",
       },

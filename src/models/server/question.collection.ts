@@ -17,6 +17,8 @@ export default async function createQuestionCollection(){
         databases.createStringAttribute(db,questionCollection,"title",100,true),
         databases.createStringAttribute(db,questionCollection,"content",1000,true),
         databases.createStringAttribute(db,questionCollection,"authorId",50,true),
+        databases.createStringAttribute(db,questionCollection,"authorName",100,true),
+        databases.createIntegerAttribute(db,questionCollection,"authorreputation",true),
         databases.createStringAttribute(db,questionCollection,"tags",50,true,undefined,true),
         databases.createStringAttribute(db,questionCollection,"attachments",50,false),
     ])
@@ -30,7 +32,9 @@ export default async function createQuestionCollection(){
     // create indexes
     // databases.createIndex(databaseId,collectionId,"key==indexname(must be unique)",IndexType,"array of attribute name on which you want to create index")
     await Promise.all([
-        databases.createIndex(db,questionCollection,"title_index",IndexType.Fulltext,["title"]),
-        databases.createIndex(db,questionCollection,"content_index",IndexType.Fulltext,["content"])
+        databases.createIndex(db, questionCollection, "title_index", IndexType.Fulltext, ["title"]),
+        databases.createIndex(db, questionCollection, "content_index", IndexType.Fulltext, ["content"]),
+        databases.createIndex(db, questionCollection, "tags_index", IndexType.Key, ["tags"]), //  useful for tag filtering
+        databases.createIndex(db, questionCollection, "authorId_index", IndexType.Key, ["authorId"]), //  quick lookup by author
     ])
 }

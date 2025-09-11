@@ -43,6 +43,8 @@ interface QuestionDocument {
     title: string;
     content: string;
     authorId: string;
+    authorName : string;
+    authorReputation? : number;
     tags: string[];
     attachmentId?: string;
 }
@@ -57,13 +59,20 @@ const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
         title: String(question?.title || ""),
         content: String(question?.content || ""),
         authorId: user?.$id, 
+        authorName : user?.name ?? "",
+        authorReputation : user?.prefs?.reputation ?? 0, //optional
         tags: new Set((question?.tags || []) as string[]), //using new set() ensure uniqueness
         attachment: null as File | null, //uploaded image file or null
     });
 
     React.useEffect(() => {
-        setFormData(prev => ({ ...prev, authorId: user?.$id ?? prev.authorId }));
-    }, [user]); //whenever used id change update it to form data also
+    setFormData(prev => ({
+        ...prev,
+        authorId: user?.$id ?? prev.authorId,
+        authorName: user?.name ?? prev.authorName,
+        authorReputation: user?.prefs?.reputation ?? prev.authorReputation,
+    }));
+}, [user]); //whenever used id change update it to form data also
 
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState("");
@@ -112,6 +121,8 @@ const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
             title: formData.title,
             content: formData.content,
             authorId: formData.authorId,
+            authorName : formData.authorName,
+            authorReputation : formData.authorReputation,
             tags: Array.from(formData.tags),
             attachmentId: storageResponse.$id,
         });
@@ -145,6 +156,8 @@ const QuestionForm = ({ question }: { question?: QuestionDocument }) => {
             title: formData.title,
             content: formData.content,
             authorId: formData.authorId,
+            authorName : formData.authorName,
+            authorReputation : formData.authorReputation,
             tags: Array.from(formData.tags),
             attachmentId: attachmentId,
         });

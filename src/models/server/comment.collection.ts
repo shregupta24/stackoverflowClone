@@ -20,6 +20,7 @@ export default async function createCommentCollection(){
         databases.createEnumAttribute(db,commentCollection,"type",["answer","question"],true),
         databases.createStringAttribute(db,commentCollection,"typeId",50,true),
         databases.createStringAttribute(db,commentCollection,"authorId",50,true),
+        databases.createStringAttribute(db,commentCollection,"authorName",50,true)
     ])
     //attributes created
 }

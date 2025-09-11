@@ -10,38 +10,47 @@ import { IconTrash } from "@tabler/icons-react";
 import { ID, Models } from "appwrite";
 import Link from "next/link";
 import React from "react";
-
-const Comments = ({
-    comments: _comments,
-    type,
+//this ensure Typescript knows what fields exist 
+interface CommentDocument extends Models.Document{
+    content:string,
+    authorId:string,
+    authorName : string,
+    type:"question" | "answer",
+    typeId: string //id of that question/answer
+}
+const Comments = ({ //props being passed
+    comments: _comments, //initial lists of comments from the server
+    type, 
     typeId,
-    className,
+    className, //extra styling if needed
 }: {
-    comments: Models.DocumentList<Models.Document>;
+    comments: Models.DocumentList<CommentDocument>;
     type: "question" | "answer";
     typeId: string;
     className?: string;
 }) => {
-    const [comments, setComments] = React.useState(_comments);
-    const [newComment, setNewComment] = React.useState("");
-    const { user } = useAuthStore();
+    const [comments, setComments] = React.useState(_comments); //local state to store the comments list
+    const [newComment, setNewComment] = React.useState(""); //tracks what the user is typing in the comment text area
+    const { user } = useAuthStore(); //logged in user info(from global auth store)
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!newComment || !user) return;
+        e.preventDefault(); //stops page reload
+        if (!newComment || !user) return; //if no comment text or no logged in user exit
 
         try {
-            const response = await databases.createDocument(db, commentCollection, ID.unique(), {
+            const response = await databases.createDocument<CommentDocument>(db, commentCollection, ID.unique(), {
                 content: newComment,
                 authorId: user.$id,
+                authorName : user.name,
                 type: type,
                 typeId: typeId,
             });
 
             setNewComment(() => "");
             setComments(prev => ({
+                ...prev,
                 total: prev.total + 1,
-                documents: [{ ...response, author: user }, ...prev.documents],
+                documents: [response as CommentDocument, ...prev.documents]
             }));
         } catch (error: any) {
             window.alert(error?.message || "Error creating comment");
@@ -51,7 +60,7 @@ const Comments = ({
     const deleteComment = async (commentId: string) => {
         try {
             await databases.deleteDocument(db, commentCollection, commentId);
-
+            //update local state by filtering out deleted comment
             setComments(prev => ({
                 total: prev.total - 1,
                 documents: prev.documents.filter(comment => comment.$id !== commentId),
@@ -70,15 +79,16 @@ const Comments = ({
                         <p className="text-sm">
                             {comment.content} -{" "}
                             <Link
-                                href={`/users/${comment.authorId}/${slugify(comment.author.name)}`}
+                                href={`/users/${comment.authorId}/${slugify(comment.authorName)}`} //on clicking this link ths will take you to user profile page
                                 className="text-orange-500 hover:text-orange-600"
                             >
-                                {comment.author.name}
+                                {comment.authorName}
                             </Link>{" "}
                             <span className="opacity-60">
                                 {convertDateToRelativeTime(new Date(comment.$createdAt))}
                             </span>
                         </p>
+                        {/*if current user is the author of the comment then show the trash icon -> conditional rendering */}
                         {user?.$id === comment.authorId ? (
                             <button
                                 onClick={() => deleteComment(comment.$id)}

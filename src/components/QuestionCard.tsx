@@ -21,9 +21,9 @@ interface quesDocument{
 }
 
 const avatars = {
-  getInitials(name: string, width: number, height: number) {
+  getRandom(seed: string, width: number, height: number) {
     return {
-      href: `https://avatars.dicebear.com/api/initials/${encodeURIComponent(name)}.svg?width=${width}&height=${height}`
+      href: `https://avatars.dicebear.com/api/avataaars/${encodeURIComponent(seed)}.svg?width=${width}&height=${height}`
     };
   }
 };
@@ -70,7 +70,7 @@ const QuestionCard = ({ ques }: { ques: quesDocument }) => {
                     <div className="ml-auto flex items-center gap-1">
                         <picture>
                             <img
-                                src={avatars.getInitials(ques.authorName, 24, 24).href}
+                                src={avatars.getRandom(ques.authorName,24,24).href}
                                 alt={ques.authorName}
                                 className="rounded-lg"
                             />

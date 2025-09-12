@@ -65,18 +65,19 @@ const Answers = ({
 
             setNewAnswer(() => "");
             setAnswers(prev => ({
-                total: prev.total + 1,
+                total: prev.total + 1, //prev.total is the number of answers before
                 documents: [
                     {
-                        ...data,
+                        ...data, //this data returned by API + extra fields
                         author: user,
                         upvotesDocuments: { documents: [], total: 0 },
                         downvotesDocuments: { documents: [], total: 0 },
                         comments: { documents: [], total: 0 },
                     },
-                    ...prev.documents,
+                    ...prev.documents, // all the old answers 
                 ],
             }));
+            //this means the new answer will go on the top
         } catch (error: any) {
             window.alert(error?.message || "Error creating answer");
         }

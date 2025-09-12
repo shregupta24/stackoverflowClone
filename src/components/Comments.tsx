@@ -50,7 +50,7 @@ const Comments = ({ //props being passed
             setComments(prev => ({
                 ...prev,
                 total: prev.total + 1,
-                documents: [response as CommentDocument, ...prev.documents]
+                documents: [response, ...prev.documents]
             }));
         } catch (error: any) {
             window.alert(error?.message || "Error creating comment");

@@ -2,21 +2,40 @@
 
 import { ID, Models } from "appwrite";
 import React from "react";
-import VoteButtons from "./VoteButtons";
-import { useAuthStore } from "@/store/Auth";
-import { avatars, databases } from "@/models/client/config";
-import { answerCollection, db } from "@/models/name";
+import VoteButtons from "./VoteButtons" //child component for upvote/downvote UI.
+import { useAuthStore } from "@/Store/Auth";
 import RTE, { MarkdownPreview } from "./RTE";
-import Comments from "./Comments";
-import slugify from "@/utils/slugify";
-import Link from "next/link";
+import Comments from "./Comments"; //render comment under each answer
+import Link from "next/link";//next.js client side navigation
+import slugify from "slugify";
 import { IconTrash } from "@tabler/icons-react";
+type DocList < T = any> = {
+    documents  :T[], //an array of items of type T
+    total : number //a total number showing how many items in total exists
+}
+interface answerDocument extends Models.Document{
+    upvotesDocuments:DocList
+    downvotesDocuments : DocList
+    authorId : string,
+    content:string,
+    authorName : string,
+    authorReputation? : number,
+    comments:DocList, 
+}
+//small helper that returns a generated avatar URL
+const avatars = {
+  getRandom(seed: string, width: number, height: number) {
+    return {
+      href: `https://avatars.dicebear.com/api/avataaars/${encodeURIComponent(seed)}.svg?width=${width}&height=${height}`
+    };
+  }
+};
 
 const Answers = ({
     answers: _answers,
-    questionId,
+    questionId, //Id of the question these question belongs to
 }: {
-    answers: Models.DocumentList<Models.Document>;
+    answers: Models.DocumentList<answerDocument>;
     questionId: string;
 }) => {
     const [answers, setAnswers] = React.useState(_answers);
@@ -28,8 +47,11 @@ const Answers = ({
         if (!newAnswer || !user) return;
 
         try {
-            const response = await fetch("/api/answer", {
+            const response = await fetch("/api/answer", { //calls the API endPoint /api/answer to create answer
                 method: "POST",
+                headers:{
+                    "Content-Type" : "application/json"
+                },
                 body: JSON.stringify({
                     questionId: questionId,
                     answer: newAnswer,
@@ -85,7 +107,7 @@ const Answers = ({
     return (
         <>
             <h2 className="mb-4 text-xl">{answers.total} Answers</h2>
-            {answers.documents.map(answer => (
+            {answers?.documents.map(answer => (
                 <div key={answer.$id} className="flex gap-4">
                     <div className="flex shrink-0 flex-col items-center gap-4">
                         <VoteButtons
@@ -108,20 +130,20 @@ const Answers = ({
                         <div className="mt-4 flex items-center justify-end gap-1">
                             <picture>
                                 <img
-                                    src={avatars.getInitials(answer.author.name, 36, 36).href}
-                                    alt={answer.author.name}
+                                    src={avatars.getRandom(answer.authorName, 36, 36).href}
+                                    alt={answer.authorName}
                                     className="rounded-lg"
                                 />
                             </picture>
                             <div className="block leading-tight">
                                 <Link
-                                    href={`/users/${answer.author.$id}/${slugify(answer.author.name)}`}
+                                    href={`/users/${answer.authorId}/${slugify(answer.authorName)}`}
                                     className="text-orange-500 hover:text-orange-600"
                                 >
-                                    {answer.author.name}
+                                    {answer.authorName}
                                 </Link>
                                 <p>
-                                    <strong>{answer.author.reputation}</strong>
+                                    <strong>{answer.authorReputation}</strong>
                                 </p>
                             </div>
                         </div>

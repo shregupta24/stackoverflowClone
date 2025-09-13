@@ -1,15 +1,16 @@
 "use client";
-
-import { databases } from "@/models/client/config";
+// in front end we are checking that whether user has already voted in the document or 
+// not if yes then hightlight the upvote button / downvote button and if haven't voted then no highlight
+import { databases } from "@/models/client/config"; // it is used to call appwrite SDK method (eg. databases.listDcouments)
 import { db, voteCollection } from "@/models/name";
-import { useAuthStore } from "@/Store/Auth";
+import { useAuthStore } from "@/Store/Auth"; //custom hook to access auth state.
 import { cn } from "@/lib/utils";
-import { IconCaretUpFilled, IconCaretDownFilled } from "@tabler/icons-react";
+import { IconCaretUpFilled, IconCaretDownFilled } from "@tabler/icons-react"; //visuals up/down arrow icons for upvote downvote buttons.
 import { ID, Models, Query } from "appwrite";
 import { useRouter } from "next/navigation";
 import React from "react";
 interface VoteDocument extends Models.Document{
-    voteStatus : String
+    voteStatus : string
 }
 const VoteButtons = ({
     type,
@@ -20,10 +21,11 @@ const VoteButtons = ({
 }: {
     type: "question" | "answer";
     id: string;
-    upvotes: Models.DocumentList<Models.Document>;
+    upvotes: Models.DocumentList<Models.Document>; //total upvotes and downvotes
     downvotes: Models.DocumentList<Models.Document>;
     className?: string;
 }) => {
+    //we track whether the current user has already voted on this type/id.
     const [votedDocument, setVotedDocument] = React.useState<VoteDocument | null>(); // undefined means not fetched yet
     const [voteResult, setVoteResult] = React.useState<number>(upvotes.total - downvotes.total);
 
@@ -38,19 +40,22 @@ const VoteButtons = ({
                     Query.equal("typeId", id),
                     Query.equal("votedById", user.$id),
                 ]);
-                setVotedDocument(() => response.documents[0] || null);
+                setVotedDocument(() => response.documents[0] || null); // if document exist 
             }
         })();
-    }, [user, id, type]);
+    }, [user, id, type]); //if either user, id or type changes re-render it
 
     const toggleUpvote = async () => {
-        if (!user) return router.push("/login");
+        if (!user) return router.push("/login"); // if user is not logged in then redirect it to login page
 
         if (votedDocument === undefined) return;
 
         try {
             const response = await fetch(`/api/vote`, {
                 method: "POST",
+                headers :{
+                    "Content-Type" : "application/json"
+                },
                 body: JSON.stringify({
                     votedById: user.$id,
                     voteStatus: "upvoted",
@@ -78,6 +83,9 @@ const VoteButtons = ({
         try {
             const response = await fetch(`/api/vote`, {
                 method: "POST",
+                headers :{
+                    "Content-Type" : "application/json"
+                },
                 body: JSON.stringify({
                     votedById: user.$id,
                     voteStatus: "downvoted",
@@ -103,12 +111,12 @@ const VoteButtons = ({
                 className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-full border p-1 duration-200 hover:bg-white/10",
                     votedDocument && votedDocument.voteStatus === "upvoted"
-                        ? "border-orange-500 text-orange-500"
+                        ? "border-orange-500 text-orange-500" //adds an orange border with a text 
                         : "border-white/30"
                 )}
                 onClick={toggleUpvote}
             >
-                <IconCaretUpFilled />
+                <IconCaretUpFilled /> {/*this is the content of the button*/}
             </button>
             <span>{voteResult}</span>
             <button

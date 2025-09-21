@@ -17,7 +17,8 @@ interface quesDocument{
     authorId : string,
     authorName : string,
     authorReputation? : number,
-    $createdAt : string
+    $createdAt : string,
+    totalVotes : number,
 }
 
 const avatars = {
